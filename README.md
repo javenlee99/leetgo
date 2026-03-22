@@ -9,6 +9,8 @@
 [![Twitter Follow](https://img.shields.io/twitter/follow/j178x)](https://twitter.com/j178x)
 <img align="right" height=150 src="https://github.com/user-attachments/assets/5942dc93-31b5-4d93-ba55-4c0b20550981" />
 
+This is a project I copied from the expert j178 to familiarize myself with the various processes on GitHub. Original project URL: https://github.com/j178/leetgo
+
 `leetgo` is a command-line tool for LeetCode that provides almost all the functionality of LeetCode,
 allowing you to do all of your LeetCode exercises without leaving the terminal.
 It can automatically generate **skeleton code and test cases**, support **local testing and debugging**,

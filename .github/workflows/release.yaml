@@ -30,36 +30,4 @@ jobs:
         env:
           # Custom secret here since we need to access to j178/homebrew-tap and j178/scoop-bucket repo.
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          DISCORD_WEBHOOK_ID: ${{ secrets.DISCORD_WEBHOOK_ID }}
-          DISCORD_WEBHOOK_TOKEN: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
-          AUR_PRIVATE_KEY: ${{ secrets.AUR_PRIVATE_KEY }}
 
-  release_pypi:
-    runs-on: ubuntu-latest
-    if: "startsWith(github.ref, 'refs/tags/testutils/python/v')"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install deps
-        run:
-          python -m pip install build twine
-      - run: |
-          python -m build
-          twine upload dist/*
-        working-directory: testutils/python
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-
-  release_cargo:
-    runs-on: ubuntu-latest
-    if: "startsWith(github.ref, 'refs/tags/testutils/rust/v')"
-    steps:
-      - uses: actions/checkout@v4
-      - run: cargo publish
-        working-directory: testutils/rust
-        env:
-          RUST_BACKTRACE: 1
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

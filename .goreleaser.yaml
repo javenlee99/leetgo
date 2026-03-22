@@ -92,7 +92,7 @@ homebrew_casks:
 announce:
   # DISCORD_WEBHOOK_ID and DISCORD_WEBHOOK_TOKEN
   discord:
-    enabled: true
+    enabled: false
 
 # The lines beneath this are called `modelines`. See `:help modeline`
 # Feel free to remove those if you don't want/use them.

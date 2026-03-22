@@ -8,6 +8,8 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 [![Twitter Follow](https://img.shields.io/twitter/follow/niceoe)](https://twitter.com/niceoe)
 
+这是一个从大佬j178 copy的项目，用于熟悉github的一系列流程，原项目地址：https://github.com/j178/leetgo
+
 `leetgo` 是一个命令行工具，帮助你管理 LeetCode 代码、简化常用的 LeetCode 操作，让解题更轻松~
 
 `leetgo` 可以自动生成题目描述、样例代码，最特别的是还可以生成测试代码，让你的代码可以在本地运行、测试，你可以使用喜欢的 Debugger 来调试代码中的问题。
