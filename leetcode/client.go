@@ -227,6 +227,13 @@ func (c *cnClient) send(req *http.Request, authType authType, result any) (*http
 				return err
 			}
 			if respErr.IsError() {
+				// Reset credentials if authentication failed (expired cookies)
+				if respErr.Code == http.StatusForbidden || respErr.Code == http.StatusUnauthorized {
+					if resettable, ok := c.opt.cred.(ResettableProvider); ok {
+						log.Warn("authentication failed, resetting credentials")
+						resettable.Reset()
+					}
+				}
 				return respErr
 			}
 			return nil

@@ -1,11 +1,14 @@
 package leetcode
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -127,6 +130,14 @@ func (p *passwordAuth) AddCredentials(req *http.Request) error {
 		if !p.hasAuth() {
 			return errors.New("login failed")
 		}
+
+		// Cache cookies to user cache directory
+		site := p.c.BaseURI()
+		if err := saveCookiesToCache(p.LeetCodeSession, p.CsrfToken, p.CfClearance, site); err != nil {
+			log.Warn("failed to cache cookies", "error", err)
+		} else {
+			log.Debug("cached cookies to user cache directory")
+		}
 	}
 	return p.cookiesAuth.AddCredentials(req)
 }
@@ -136,6 +147,57 @@ func (p *passwordAuth) Reset() {
 	defer p.mu.Unlock()
 	p.LeetCodeSession = ""
 	p.CsrfToken = ""
+	p.CfClearance = ""
+
+	// Clear cached cookies
+	clearCookiesFromCache()
+}
+
+type cacheAuth struct {
+	cookiesAuth
+	mu   sync.Mutex
+	c    Client
+	site string
+}
+
+func NewCacheAuth(site string) CredentialsProvider {
+	return &cacheAuth{site: site}
+}
+
+func (ca *cacheAuth) Source() string {
+	return "cache"
+}
+
+func (ca *cacheAuth) SetClient(c Client) {
+	ca.c = c
+}
+
+func (ca *cacheAuth) AddCredentials(req *http.Request) error {
+	ca.mu.Lock()
+	defer ca.mu.Unlock()
+
+	if !ca.hasAuth() {
+		// Load from cache
+		session, csrf, cf, err := loadCookiesFromCache(ca.site)
+		if err != nil {
+			return fmt.Errorf("load from cache: %w", err)
+		}
+		ca.LeetCodeSession = session
+		ca.CsrfToken = csrf
+		ca.CfClearance = cf
+		log.Debug("loaded credentials from cache")
+	}
+
+	return ca.cookiesAuth.AddCredentials(req)
+}
+
+func (ca *cacheAuth) Reset() {
+	ca.mu.Lock()
+	defer ca.mu.Unlock()
+	ca.LeetCodeSession = ""
+	ca.CsrfToken = ""
+	ca.CfClearance = ""
+	clearCookiesFromCache()
 }
 
 type browserAuth struct {
@@ -207,6 +269,16 @@ func (b *browserAuth) AddCredentials(req *http.Request) error {
 			log.Info("reading leetcode cookies", "browser", store.Browser(), "domain", domain)
 			break
 		}
+
+		// Cache cookies to user cache directory
+		if b.hasAuth() {
+			site := b.c.BaseURI()
+			if err := saveCookiesToCache(b.LeetCodeSession, b.CsrfToken, b.CfClearance, site); err != nil {
+				log.Warn("failed to cache cookies", "error", err)
+			} else {
+				log.Debug("cached cookies to user cache directory")
+			}
+		}
 	}
 	if !b.hasAuth() {
 		if len(errs) > 0 {
@@ -223,6 +295,10 @@ func (b *browserAuth) Reset() {
 	defer b.mu.Unlock()
 	b.LeetCodeSession = ""
 	b.CsrfToken = ""
+	b.CfClearance = ""
+
+	// Clear cached cookies
+	clearCookiesFromCache()
 }
 
 type combinedAuth struct {
@@ -266,7 +342,21 @@ func (c *combinedAuth) Reset() {
 
 func ReadCredentials() CredentialsProvider {
 	cfg := config.Get()
+	site := string(cfg.LeetCode.Site)
+
+	// First priority: try to load from cache
+	// If cache exists and valid, use it directly without trying other methods
+	if _, _, _, err := loadCookiesFromCache(site); err == nil {
+		log.Debug("using cached credentials")
+		return NewCacheAuth(site)
+	} else {
+		log.Debug("cache not available, falling back to other methods", "error", err)
+	}
+
+	// If cache doesn't exist or is invalid, build fallback providers
 	var providers []CredentialsProvider
+
+	// Then try configured credential sources
 	for _, from := range cfg.LeetCode.Credentials.From {
 		switch from {
 		case "browser":
@@ -276,10 +366,8 @@ func ReadCredentials() CredentialsProvider {
 			password := os.Getenv("LEETCODE_PASSWORD")
 			providers = append(providers, NewPasswordAuth(username, password))
 		case "cookies":
-			session := os.Getenv("LEETCODE_SESSION")
-			csrfToken := os.Getenv("LEETCODE_CSRFTOKEN")
-			cfClearance := os.Getenv("LEETCODE_CFCLEARANCE")
-			providers = append(providers, NewCookiesAuth(session, csrfToken, cfClearance))
+			// Already handled above
+			continue
 		}
 	}
 	if len(providers) == 0 {
@@ -289,4 +377,70 @@ func ReadCredentials() CredentialsProvider {
 		return providers[0]
 	}
 	return NewCombinedAuth(providers...)
+}
+
+// CachedCredentials represents cached authentication credentials
+type CachedCredentials struct {
+	LeetCodeSession string    `json:"leetcode_session"`
+	CsrfToken       string    `json:"csrf_token"`
+	CfClearance     string    `json:"cf_clearance,omitempty"`
+	CachedAt        time.Time `json:"cached_at"`
+	Site            string    `json:"site"`
+}
+
+// saveCookiesToCache saves cookies to user cache directory
+func saveCookiesToCache(session, csrfToken, cfClearance, site string) error {
+	cacheDir := config.Get().CacheDir()
+	credFile := filepath.Join(cacheDir, "credentials.json")
+
+	// Ensure cache directory exists
+	if err := os.MkdirAll(cacheDir, 0700); err != nil {
+		return fmt.Errorf("create cache dir: %w", err)
+	}
+
+	creds := CachedCredentials{
+		LeetCodeSession: session,
+		CsrfToken:       csrfToken,
+		CfClearance:     cfClearance,
+		CachedAt:        time.Now(),
+		Site:            site,
+	}
+
+	data, err := json.MarshalIndent(creds, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal credentials: %w", err)
+	}
+
+	// Write to file with restricted permissions (0600 - owner read/write only)
+	return os.WriteFile(credFile, data, 0600)
+}
+
+// loadCookiesFromCache loads cookies from cache
+func loadCookiesFromCache(site string) (session, csrfToken, cfClearance string, err error) {
+	credFile := filepath.Join(config.Get().CacheDir(), "credentials.json")
+
+	data, err := os.ReadFile(credFile)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	var creds CachedCredentials
+	if err := json.Unmarshal(data, &creds); err != nil {
+		return "", "", "", err
+	}
+
+	// Verify site matches (normalize by removing trailing slash)
+	cachedSite := strings.TrimSuffix(creds.Site, "/")
+	configSite := strings.TrimSuffix(site, "/")
+	if cachedSite != configSite {
+		return "", "", "", fmt.Errorf("cached credentials for different site: cached=%s, config=%s", cachedSite, configSite)
+	}
+
+	return creds.LeetCodeSession, creds.CsrfToken, creds.CfClearance, nil
+}
+
+// clearCookiesFromCache removes cached cookies
+func clearCookiesFromCache() {
+	credFile := filepath.Join(config.Get().CacheDir(), "credentials.json")
+	_ = os.Remove(credFile)
 }
