@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -341,19 +342,19 @@ func (c *combinedAuth) Reset() {
 
 func ReadCredentials() CredentialsProvider {
 	cfg := config.Get()
-	var providers []CredentialsProvider
-
-	// Highest priority: load from cache
 	site := string(cfg.LeetCode.Site)
-	providers = append(providers, NewCacheAuth(site))
 
-	// Second priority: environment variables
-	session := os.Getenv("LEETCODE_SESSION")
-	csrfToken := os.Getenv("LEETCODE_CSRFTOKEN")
-	if session != "" && csrfToken != "" {
-		cfClearance := os.Getenv("LEETCODE_CFCLEARANCE")
-		providers = append(providers, NewCookiesAuth(session, csrfToken, cfClearance))
+	// First priority: try to load from cache
+	// If cache exists and valid, use it directly without trying other methods
+	if _, _, _, err := loadCookiesFromCache(site); err == nil {
+		log.Debug("using cached credentials")
+		return NewCacheAuth(site)
+	} else {
+		log.Debug("cache not available, falling back to other methods", "error", err)
 	}
+
+	// If cache doesn't exist or is invalid, build fallback providers
+	var providers []CredentialsProvider
 
 	// Then try configured credential sources
 	for _, from := range cfg.LeetCode.Credentials.From {
@@ -428,9 +429,11 @@ func loadCookiesFromCache(site string) (session, csrfToken, cfClearance string, 
 		return "", "", "", err
 	}
 
-	// Verify site matches
-	if creds.Site != site {
-		return "", "", "", fmt.Errorf("cached credentials for different site")
+	// Verify site matches (normalize by removing trailing slash)
+	cachedSite := strings.TrimSuffix(creds.Site, "/")
+	configSite := strings.TrimSuffix(site, "/")
+	if cachedSite != configSite {
+		return "", "", "", fmt.Errorf("cached credentials for different site: cached=%s, config=%s", cachedSite, configSite)
 	}
 
 	return creds.LeetCodeSession, creds.CsrfToken, creds.CfClearance, nil
