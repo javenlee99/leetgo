@@ -160,6 +160,7 @@ Available Commands:
   cache                   Manage local questions cache
   debug                   Show debug info
   open                    Open one or multiple question pages in a browser
+  solution                Fetch solutions from followed users
   help                    Help about any command
 
 Flags:
@@ -271,6 +272,19 @@ contest:
   filename_template: '{{ .ContestShortSlug }}/{{ .Id }}{{ if .SlugIsMeaningful }}.{{ .Slug }}{{ end }}'
   # Open the contest page in browser after generating.
   open_in_browser: true
+# Settings for fetching solutions from followed users.
+solution:
+  # List of LeetCode usernames whose solutions to fetch.
+  # Example: ["LeetCode-Solution", "liweiwei1419"]
+  followed_users:
+    - LeetCode-Solution
+  # Output directory relative to question directory.
+  # Default: "solutions"
+  output_dir: solutions
+  # Template for solution filenames.
+  # Available: {{.QuestionId}}, {{.AuthorSlug}}, {{.AuthorUsername}}
+  # Default: "{{.QuestionId}}_{{.AuthorSlug}}_solution.md"
+  filename_template: '{{.QuestionId}}_{{.AuthorSlug}}_solution.md'
 # Editor settings to open generated files.
 editor:
   # Use a predefined editor: vim, vscode, goland

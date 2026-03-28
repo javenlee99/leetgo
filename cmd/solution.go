@@ -81,7 +81,7 @@ leetgo solution last`,
 		// Create output directory
 		outDir := getQuestionOutDir(q, cfg)
 		solutionDir := filepath.Join(outDir, cfg.Solution.OutputDir)
-		if err := os.MkdirAll(solutionDir, 0755); err != nil {
+		if err := os.MkdirAll(solutionDir, 0o755); err != nil {
 			return fmt.Errorf("create output directory: %w", err)
 		}
 
@@ -112,7 +112,7 @@ leetgo solution last`,
 
 			// Format content
 			content := formatSolutionMarkdown(solution, q.TitleSlug)
-			if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+			if err := os.WriteFile(filepath, []byte(content), 0o644); err != nil {
 				log.Error("Failed to save solution", "file", filepath, "error", err)
 				continue
 			}

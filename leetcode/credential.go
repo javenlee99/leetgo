@@ -394,7 +394,7 @@ func saveCookiesToCache(session, csrfToken, cfClearance, site string) error {
 	credFile := filepath.Join(cacheDir, "credentials.json")
 
 	// Ensure cache directory exists
-	if err := os.MkdirAll(cacheDir, 0700); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o700); err != nil {
 		return fmt.Errorf("create cache dir: %w", err)
 	}
 
@@ -412,7 +412,7 @@ func saveCookiesToCache(session, csrfToken, cfClearance, site string) error {
 	}
 
 	// Write to file with restricted permissions (0600 - owner read/write only)
-	return os.WriteFile(credFile, data, 0600)
+	return os.WriteFile(credFile, data, 0o600)
 }
 
 // loadCookiesFromCache loads cookies from cache
