@@ -43,6 +43,7 @@ type Config struct {
 	Code        CodeConfig     `yaml:"code" mapstructure:"code"`
 	LeetCode    LeetCodeConfig `yaml:"leetcode" mapstructure:"leetcode"`
 	Contest     ContestConfig  `yaml:"contest" mapstructure:"contest"`
+	Solution    SolutionConfig `yaml:"solution" mapstructure:"solution" comment:"Settings for fetching solutions from followed users."`
 	Editor      Editor         `yaml:"editor" mapstructure:"editor" comment:"Editor settings to open generated files."`
 }
 
@@ -50,6 +51,12 @@ type ContestConfig struct {
 	OutDir           string `yaml:"out_dir" mapstructure:"out_dir" comment:"Base directory to put generated contest questions."`
 	FilenameTemplate string `yaml:"filename_template" mapstructure:"filename_template" comment:"Template to generate filename of the question."`
 	OpenInBrowser    bool   `yaml:"open_in_browser" mapstructure:"open_in_browser" comment:"Open the contest page in browser after generating."`
+}
+
+type SolutionConfig struct {
+	FollowedUsers    []string `yaml:"followed_users" mapstructure:"followed_users" comment:"List of LeetCode usernames whose solutions to fetch.\nExample: [\"LeetCode-Solution\", \"liweiwei1419\"]"`
+	OutputDir        string   `yaml:"output_dir" mapstructure:"output_dir" comment:"Output directory relative to question directory.\nDefault: \"solutions\""`
+	FilenameTemplate string   `yaml:"filename_template" mapstructure:"filename_template" comment:"Template for solution filenames.\nAvailable: {{.QuestionId}}, {{.AuthorSlug}}, {{.AuthorUsername}}\nDefault: \"{{.QuestionId}}_{{.AuthorSlug}}_solution.md\""`
 }
 
 type Editor struct {
@@ -256,6 +263,11 @@ func defaultConfig() *Config {
 			OutDir:           "contest",
 			FilenameTemplate: `{{ .ContestShortSlug }}/{{ .Id }}{{ if .SlugIsMeaningful }}.{{ .Slug }}{{ end }}`,
 			OpenInBrowser:    true,
+		},
+		Solution: SolutionConfig{
+			FollowedUsers:    []string{"LeetCode-Solution"},
+			OutputDir:        "solutions",
+			FilenameTemplate: `{{.QuestionId}}_{{.AuthorSlug}}_solution.md`,
 		},
 	}
 }

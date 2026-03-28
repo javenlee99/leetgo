@@ -151,6 +151,7 @@ func initCommands() {
 		inspectCmd,
 		whoamiCmd,
 		openCmd,
+		solutionCmd,
 	}
 	for _, cmd := range commands {
 		cmd.Flags().SortFlags = false

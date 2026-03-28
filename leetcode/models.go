@@ -266,3 +266,46 @@ type StreakCounter struct {
 	DaysSkipped    int    `json:"daysSkipped"`
 	TodayCompleted bool   `json:"todayCompleted"`
 }
+
+// Solution-related types
+
+type SolutionList struct {
+	TotalNum int            `json:"totalNum"`
+	Edges    []SolutionEdge `json:"edges"`
+}
+
+type SolutionEdge struct {
+	Node SolutionMetadata `json:"node"`
+}
+
+type SolutionMetadata struct {
+	UUID          string `json:"uuid"`
+	Title         string `json:"title"`
+	Slug          string `json:"slug"`
+	Status        string `json:"status"`
+	UpvoteCount   int    `json:"upvoteCount"`
+	FavoriteCount int    `json:"favoriteCount"`
+	CreatedAt     string `json:"createdAt"`
+	Author        struct {
+		Username string `json:"username"`
+		Profile  struct {
+			UserSlug   string `json:"userSlug"`
+			RealName   string `json:"realName"`
+			UserAvatar string `json:"userAvatar"`
+		} `json:"profile"`
+	} `json:"author"`
+	Tags    []QuestionTag `json:"tags"`
+	Summary string        `json:"summary"`
+	Topic   struct {
+		ID           int `json:"id"`
+		CommentCount int `json:"commentCount"`
+		ViewCount    int `json:"viewCount"`
+	} `json:"topic"`
+}
+
+type Solution struct {
+	SolutionMetadata
+	Content      string // Full markdown content
+	QuestionSlug string
+	QuestionID   string
+}

@@ -82,6 +82,8 @@ type Client interface {
 	RegisterContest(slug string) error
 	UnregisterContest(slug string) error
 	GetStreakCounter() (StreakCounter, error)
+	GetSolutionList(questionSlug string, skip, limit int) (*SolutionList, error)
+	GetSolutionDetail(slug string) (*Solution, error)
 }
 
 type cnClient struct {
