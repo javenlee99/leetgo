@@ -122,7 +122,7 @@ leetgo solution last`,
 		}
 
 		if saved > 0 {
-			log.Info("Done", "saved", saved, "solutions")
+			log.Info("Done", "saved", saved)
 		} else {
 			log.Warn("No solutions were saved")
 		}
