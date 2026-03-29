@@ -45,10 +45,6 @@ func toJavaType(typeName string) string {
 	return typeName
 }
 
-func toJavaClassLiteral(typeName string) string {
-	return toJavaType(typeName) + ".class"
-}
-
 func (j java) generateNormalTestCode(q *leetcode.QuestionData) string {
 	// 生成参数声明和初始化
 	paramDecls := make([]string, 0, len(q.MetaData.Params))
@@ -863,7 +859,6 @@ func (j java) RunLocalTest(q *leetcode.QuestionData, outDir string, targetCase s
 		legacyPath := filepath.Join(workDir, "testcases.txt")
 		if utils.IsExist(legacyPath) {
 			testCasesName = "testcases.txt"
-			testCasesPath = legacyPath
 		} else {
 			// Auto-generate testcases file for compatibility with previously generated Java files.
 			tc, tcErr := j.generateTestCasesFile(q, defaultTestCasesName)
