@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/j178/leetgo/config"
+	"github.com/j178/leetgo/lang"
 	"github.com/j178/leetgo/leetcode"
 )
 
@@ -79,7 +80,10 @@ leetgo solution last`,
 		log.Info("Fetching solution details", "count", len(filtered))
 
 		// Create output directory
-		outDir := getQuestionOutDir(q, cfg)
+		outDir, err := getQuestionOutDir(q, cfg)
+		if err != nil {
+			return fmt.Errorf("get question output directory: %w", err)
+		}
 		solutionDir := filepath.Join(outDir, cfg.Solution.OutputDir)
 		if err := os.MkdirAll(solutionDir, 0o755); err != nil {
 			return fmt.Errorf("create output directory: %w", err)
@@ -131,7 +135,24 @@ leetgo solution last`,
 }
 
 // getQuestionOutDir returns the output directory for a question
-func getQuestionOutDir(q *leetcode.QuestionData, cfg *config.Config) string {
+func getQuestionOutDir(q *leetcode.QuestionData, cfg *config.Config) (string, error) {
+	// Ensure question data is fulfilled
+	if err := q.Fulfill(); err != nil {
+		return "", fmt.Errorf("fulfill question data: %w", err)
+	}
+
+	// Get language generator to use the same filename template
+	gen, err := lang.GetGenerator(cfg.Code.Lang)
+	if err != nil {
+		return "", fmt.Errorf("get language generator: %w", err)
+	}
+
+	// Generate paths using the same logic as leetgo pick
+	result, err := gen.GeneratePaths(q)
+	if err != nil {
+		return "", fmt.Errorf("generate paths: %w", err)
+	}
+
 	// Determine base directory based on language
 	var baseDir string
 	switch cfg.Code.Lang {
@@ -153,8 +174,8 @@ func getQuestionOutDir(q *leetcode.QuestionData, cfg *config.Config) string {
 		baseDir = cfg.Code.Lang
 	}
 
-	// Construct full path: projectRoot/baseDir/questionSlug
-	return filepath.Join(cfg.ProjectRoot(), baseDir, q.TitleSlug)
+	// Construct full path: projectRoot/baseDir/subDir (e.g., java/0049.group-anagrams)
+	return filepath.Join(cfg.ProjectRoot(), baseDir, result.SubDir), nil
 }
 
 // generateFilename generates filename from template

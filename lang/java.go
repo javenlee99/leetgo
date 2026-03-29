@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -15,6 +16,29 @@ import (
 
 type java struct {
 	baseLang
+}
+
+// extractReturnType 从代码片段中提取方法的返回类型
+func (j java) extractReturnType(q *leetcode.QuestionData) string {
+	codeSnippet := q.GetCodeSnippet(j.Slug())
+
+	// 查找方法定义：public ReturnType methodName(
+	// 例如：public List<List<String>> groupAnagrams(String[] strs)
+	methodPattern := fmt.Sprintf("public\\s+(.+?)\\s+%s\\s*\\(", q.MetaData.Name)
+	re := regexp.MustCompile(methodPattern)
+	matches := re.FindStringSubmatch(codeSnippet)
+
+	if len(matches) >= 2 {
+		returnType := strings.TrimSpace(matches[1])
+		// 移除可能的修饰符（如static, final等）
+		parts := strings.Fields(returnType)
+		if len(parts) > 0 {
+			return parts[len(parts)-1]
+		}
+	}
+
+	// 如果提取失败，fallback到toJavaType
+	return toJavaType(q.MetaData.Return.Type)
 }
 
 func toJavaType(typeName string) string {
@@ -69,8 +93,8 @@ func (j java) generateNormalTestCode(q *leetcode.QuestionData) string {
 	var ansDecl string
 
 	if q.MetaData.Return != nil && q.MetaData.Return.Type != "void" {
-		// 有返回值
-		returnType := toJavaType(q.MetaData.Return.Type)
+		// 有返回值 - 从代码片段中提取实际的返回类型
+		returnType := j.extractReturnType(q)
 		methodCall = fmt.Sprintf(
 			"\t\t%s ans = new Solution().%s(%s);",
 			returnType,
